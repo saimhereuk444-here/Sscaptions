@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CAPTIONS BY SIGM√ - Auto AI</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body {
+      margin: 0; background: #090b10; color: #fff;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; padding: 16px;
+    }
+    .card {
+      width: 100%; max-width: 520px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(0, 255, 170, 0.25);
+      border-radius: 18px; padding: 20px;
+      box-shadow: 0 0 30px rgba(0, 255, 170, 0.1);
+    }
+    h2 {
+      margin: 0 0 6px; color: #00ffaa;
+      text-shadow: 0 0 10px rgba(0,255,170,0.4);
+    }
+    p { margin: 0 0 16px; font-size: 13px; color: #9ca3af; }
+    input[type="file"], select, textarea {
+      width: 100%; padding: 12px; margin-bottom: 12px;
+      border-radius: 10px; border: 1px solid #262b38;
+      background: #111520; color: #fff; font-size: 14px;
+    }
+    button {
+      width: 100%; padding: 14px; border: none; border-radius: 10px;
+      background: linear-gradient(90deg, #00ffaa, #00b8ff);
+      color: #000; font-weight: 800; font-size: 15px; cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #output {
+      margin-top: 16px; padding: 12px; border-radius: 10px;
+      background: #0d111a; border: 1px solid #1f2636;
+      white-space: pre-wrap; font-size: 13px; color: #e5e7eb;
+      min-height: 90px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>CAPTIONS BY SIGM√</h2>
+    <p>No API Key Required • Direct Background AI Engine</p>
+
+    <input type="file" id="mediaFile" accept="audio/*,video/*" />
+
+    <select id="langSelect">
+      <option value="Roman Urdu">Roman Urdu (Pakistani/Hindi Style)</option>
+      <option value="English">English</option>
+      <option value="Urdu">Urdu Script</option>
+      <option value="Punjabi">Punjabi</option>
+    </select>
+
+    <button id="genBtn" onclick="generateCaptions()">GENERATE CAPTIONS ⚡</button>
+
+    <div id="output">Yahan tere timestamps wale captions aayenge...</div>
+  </div>
+
+  <script>
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function generateCaptions() {
+      const fileInput = document.getElementById('mediaFile');
+      const lang = document.getElementById('langSelect').value;
+      const out = document.getElementById('output');
+      const btn = document.getElementById('genBtn');
+
+      if (!fileInput.files.length) {
+        out.textContent = "Pehle koi audio ya chhoti video file select kar bhai!";
+        return;
+      }
+
+      const file = fileInput.files[0];
+      if (file.size > 4 * 1024 * 1024) {
+        out.textContent = "File 4MB se chhoti rakho taake free Vercel server par fast chale!";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "AI SUN RAHA HAI... ⏳";
+      out.textContent = "Processing in background...";
+
+      try {
+        const base64Data = await fileToBase64(file);
+        const prompt = `Transcribe this audio/video accurately into ${lang} with exact SRT timestamps (00:00:01,000 --> 00:00:03,500). Return ONLY the SRT captions, nothing else.`;
+
+        // Direct tere backend ko call karega (API key user ko nahi dikhegi)
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: prompt,
+            audioBase64: base64Data,
+            mimeType: file.type || 'audio/mp3'
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Server error');
+
+        out.textContent = data.result;
+      } catch (err) {
+        out.textContent = "Error: " + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "GENERATE CAPTIONS ⚡";
+      }
+    }
+  </script>
+</body>
+</html>
